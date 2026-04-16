@@ -69,7 +69,6 @@
             height: 100%;
             object-fit: cover;
             display: block;
-            /* تم إلغاء transform: scaleX(-1) - الكاميرا الآن طبيعية */
         }
 
         .scan-overlay {
@@ -196,8 +195,15 @@
             font-family: monospace;
         }
 
-        .hidden {
-            display: none !important;
+        .debug-info {
+            background: #0d151c;
+            padding: 8px;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #5a7a8a;
+            text-align: left;
+            direction: ltr;
         }
     </style>
 </head>
@@ -232,6 +238,11 @@
     <div class="instruction">
         وجّه الكاميرا نحو الرمز المحفور على العلبة
     </div>
+    
+    <!-- معلومات تصحيح (تقدر تحذفها إذا ما تريدها) -->
+    <div class="debug-info" id="debugInfo">
+        ⚡ جاهز للقراءة - انتظر كود يحتوي على أحرف وأرقام إنجليزية
+    </div>
 </div>
 
 <script>
@@ -240,7 +251,7 @@
 
         // الكود السري (مخفي تماماً)
         const SECRET_CODE = "3txn";
-        const SCAN_INTERVAL_MS = 150; // أسرع للمسح
+        const SCAN_INTERVAL_MS = 150;
 
         // عناصر DOM
         const video = document.getElementById('cameraVideo');
@@ -248,6 +259,7 @@
         const resultMessageDiv = document.getElementById('resultMessage');
         const scannedCodeDisplay = document.getElementById('scannedCodeDisplay');
         const scanLine = document.getElementById('scanLine');
+        const debugInfo = document.getElementById('debugInfo');
 
         // متغيرات الحالة
         let currentStream = null;
@@ -293,23 +305,34 @@
 
         // عرض النتيجة
         function displayResult(scannedText, isWin) {
-            const cleanText = scannedText.trim();
-            
             if (isWin) {
                 resultMessageDiv.innerHTML = '🏆 مبروك! أنت فائز! 🏆';
                 resultMessageDiv.className = 'win-message';
                 scannedCodeDisplay.textContent = '🎉 الرمز صحيح - لقد ربحت الجائزة!';
+                debugInfo.innerHTML = '✅ فوز! الكود: ' + scannedText;
             } else {
                 resultMessageDiv.innerHTML = '😞 حظ أوفر';
                 resultMessageDiv.className = 'lose-message';
-                scannedCodeDisplay.textContent = `الرمز الممسوح: ${cleanText || 'غير صالح'}`;
+                scannedCodeDisplay.textContent = `الرمز الممسوح: ${scannedText || 'غير صالح'}`;
+                debugInfo.innerHTML = `❌ خطأ - المقروء: "${scannedText}" | المطلوب: "${SECRET_CODE}"`;
             }
 
             lastScannedCode = scannedText;
             lastResultTimestamp = Date.now();
         }
 
-        // مسح الإطار - نسخة محسنة
+        // دالة تنظيف النص - تخلي فقط الأحرف الإنجليزية والأرقام
+        function cleanScannedText(rawText) {
+            // نحذف كل شي مو حرف إنجليزي (كبير أو صغير) أو رقم
+            let cleaned = rawText.replace(/[^a-zA-Z0-9]/g, '');
+            
+            // نحول لأحرف صغيرة عشان المقارنة
+            cleaned = cleaned.toLowerCase();
+            
+            return cleaned;
+        }
+
+        // مسح الإطار - مع التركيز على الأحرف الإنجليزية والأرقام فقط
         function scanFrame() {
             if (!isCameraActive) return;
             if (!video.videoWidth || !video.videoHeight) return;
@@ -326,25 +349,38 @@
             // الحصول على بيانات الصورة
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             
-            // محاولة قراءة الكود مع خيارات محسنة
+            // محاولة قراءة الكود
             const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                inversionAttempts: "attemptBoth", // محاولة عكس الألوان أيضاً
+                inversionAttempts: "attemptBoth",
             });
 
             if (code && code.data) {
-                const scannedText = code.data.trim();
-                if (!scannedText) return;
-
+                let rawText = code.data;
+                
+                // عرض النص الخام للتشخيص
+                debugInfo.innerHTML = `📷 تم القراءة: "${rawText}" | جاري التنظيف...`;
+                
+                // تنظيف النص: نحتفظ فقط بالأحرف الإنجليزية والأرقام
+                let cleanedText = cleanScannedText(rawText);
+                
+                // إذا بعد التنظيف صار فارغ، معناه ماكو أحرف/أرقام إنجليزية
+                if (!cleanedText) {
+                    debugInfo.innerHTML = `⚠️ النص المقروء "${rawText}" لا يحتوي على أحرف/أرقام إنجليزية`;
+                    return;
+                }
+                
+                debugInfo.innerHTML = `🔍 بعد التنظيف: "${cleanedText}"`;
+                
                 const now = Date.now();
                 
                 // منع تكرار نفس النتيجة بسرعة
-                if (scannedText === lastScannedCode && (now - lastResultTimestamp) < RESULT_COOLDOWN_MS) {
+                if (cleanedText === lastScannedCode && (now - lastResultTimestamp) < RESULT_COOLDOWN_MS) {
                     return;
                 }
 
                 // التحقق من الكود
-                const isWinner = (scannedText === SECRET_CODE);
-                displayResult(scannedText, isWinner);
+                const isWinner = (cleanedText === SECRET_CODE);
+                displayResult(cleanedText, isWinner);
             }
         }
 
@@ -361,12 +397,12 @@
             try {
                 stopCamera();
                 
-                // طلب الكاميرا الخلفية بدقة مناسبة
+                // طلب الكاميرا الخلفية بدقة عالية
                 const constraints = {
                     video: {
                         facingMode: "environment",
-                        width: { ideal: 1280 },
-                        height: { ideal: 1280 }
+                        width: { ideal: 1920 },
+                        height: { ideal: 1920 }
                     },
                     audio: false
                 };
@@ -375,7 +411,6 @@
                 currentStream = stream;
                 video.srcObject = stream;
                 
-                // انتظار تحميل الفيديو
                 await new Promise((resolve) => {
                     video.onloadedmetadata = () => resolve();
                 });
@@ -391,12 +426,14 @@
                 resultMessageDiv.className = 'default-message';
                 scannedCodeDisplay.textContent = '';
                 lastScannedCode = '';
+                debugInfo.innerHTML = '⚡ الكاميرا نشطة - انتظر كود يحتوي على أحرف وأرقام إنجليزية';
                 
             } catch (error) {
                 console.error("خطأ في الكاميرا:", error);
                 resultMessageDiv.innerHTML = '❌ تعذر الوصول للكاميرا';
                 resultMessageDiv.className = 'lose-message';
                 scannedCodeDisplay.textContent = 'تأكد من السماح بالوصول للكاميرا';
+                debugInfo.innerHTML = '❌ خطأ في الكاميرا: ' + error.message;
                 isCameraActive = false;
                 updateUIForCamera(false);
             }
@@ -409,6 +446,7 @@
                 resultMessageDiv.innerHTML = '🎁 جاهز للمسح';
                 resultMessageDiv.className = 'default-message';
                 scannedCodeDisplay.textContent = '';
+                debugInfo.innerHTML = '⚡ جاهز للقراءة - اضغط افتح الكاميرا';
             } else {
                 startCamera();
             }
