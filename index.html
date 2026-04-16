@@ -18,33 +18,40 @@
 
         .container { width: 100%; max-width: 400px; text-align: center; }
         h1 { font-size: 24px; margin-bottom: 5px; font-weight: 900; }
-        .info { font-size: 13px; opacity: 0.8; margin-bottom: 20px; }
+        .info { font-size: 13px; opacity: 0.9; margin-bottom: 15px; }
 
-        /* حاوية الكاميرا */
+        /* الكاميرا */
         .scanner-box {
             position: relative; width: 100%; aspect-ratio: 1; border: 4px solid white;
             border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
         }
-
         #video { width: 100%; height: 100%; object-fit: cover; }
-
-        /* منطقة التركيز لضمان قراءة السيفونة */
         .focus-area {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 70%; height: 30%; border: 2px solid #00ff00; border-radius: 8px;
             box-shadow: 0 0 0 1000px rgba(0,0,0,0.6); pointer-events: none;
         }
 
-        .scan-anim {
-            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
-            background: #00ff00; box-shadow: 0 0 15px #00ff00; animation: move 2s infinite linear;
-        }
-        @keyframes move { 0%, 100% { top: 0; } 50% { top: 100%; } }
-
         .btn-check {
-            margin-top: 25px; width: 100%; padding: 18px; border-radius: 50px;
-            border: none; background: white; color: #6584e8; font-size: 20px;
+            margin-top: 15px; width: 100%; padding: 15px; border-radius: 50px;
+            border: none; background: white; color: #6584e8; font-size: 18px;
             font-weight: 700; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* قسم الإدخال اليدوي */
+        .manual-entry {
+            margin-top: 20px; background: rgba(255,255,255,0.1); padding: 15px;
+            border-radius: 15px; border: 1px solid rgba(255,255,255,0.3);
+        }
+        .manual-entry p { font-size: 14px; margin-bottom: 10px; }
+        .input-group { display: flex; gap: 10px; }
+        #manualCode {
+            flex: 1; padding: 12px; border-radius: 10px; border: none; text-align: center;
+            font-size: 16px; font-weight: bold; font-family: monospace; text-transform: uppercase;
+        }
+        #manualBtn {
+            padding: 12px 20px; border-radius: 10px; border: none;
+            background: var(--accent); color: #333; font-weight: bold; cursor: pointer;
         }
 
         /* شاشة الفوز */
@@ -57,94 +64,102 @@
         .win-title { color: #835ab9; font-size: 30px; font-weight: 900; animation: bounce 1s infinite; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-        #debugCanvas { display: none; } /* لإخفاء المعالجة البرمجية */
+        canvas { display: none; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>امسح واربح! 🎁</h1>
-        <p class="info">وجه المربع الأخضر نحو الكود المحفور بدقة</p>
+        <p class="info">وجه المربع الأخضر نحو الكود (تحتاج إضاءة جيدة)</p>
 
         <div class="scanner-box">
             <video id="video" autoplay playsinline></video>
-            <div class="focus-area">
-                <div class="scan-anim"></div>
-            </div>
+            <div class="focus-area"></div>
         </div>
 
-        <button class="btn-check" id="scanBtn">إفحص الكود الآن</button>
-        <p id="msg" style="margin-top:15px; font-size: 13px;"></p>
+        <button class="btn-check" id="scanBtn">إفحص الكاميرا 📷</button>
+        <p id="msg" style="margin-top:10px; font-size: 13px;"></p>
+
+        <div class="manual-entry">
+            <p>الكاميرا لا تقرأ الكود؟ أدخله يدوياً:</p>
+            <div class="input-group">
+                <input type="text" id="manualCode" placeholder="أدخل الكود السري هنا" maxlength="10">
+                <button id="manualBtn">تحقق</button>
+            </div>
+        </div>
     </div>
 
     <div class="win-overlay" id="winScreen">
         <div class="win-content">
             <h2 class="win-title">مبروك الفوز! 🎉</h2>
-            <p style="margin: 15px 0;">لقد فزت معنا بالكود السري الصحيح</p>
-            <button class="btn-check" style="background: #835ab9; color: white;" onclick="location.reload()">إغلاق</button>
+            <p style="margin: 15px 0;">لقد فزت معنا بالكود السري <br><strong style="color:#6584e8; font-size: 22px;">NHKFAA52</strong></p>
+            <button class="btn-check" style="background: #835ab9; color: white;" onclick="location.reload()">إغلاق ومتابعة</button>
         </div>
     </div>
 
-    <canvas id="debugCanvas"></canvas>
+    <canvas id="canvas"></canvas>
 
     <script>
         const video = document.getElementById('video');
         const scanBtn = document.getElementById('scanBtn');
         const msg = document.getElementById('msg');
         const winScreen = document.getElementById('winScreen');
-        const canvas = document.getElementById('debugCanvas');
+        const canvas = document.getElementById('canvas');
+        
+        const manualCodeInput = document.getElementById('manualCode');
+        const manualBtn = document.getElementById('manualBtn');
 
         const SECRET_CODE = "NHKFAA52";
 
-        // تشغيل الكاميرا
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => { msg.innerText = "يرجى السماح بالوصول للكاميرا"; });
+        // محاولة إجبار الكاميرا على التركيز (Autofocus) إن دعمها المتصفح
+        const constraints = {
+            video: {
+                facingMode: "environment",
+                advanced: [{ focusMode: "continuous" }]
+            }
+        };
 
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => { msg.innerText = "تعذر فتح الكاميرا."; });
+
+        // التحقق عبر الكاميرا
         scanBtn.onclick = async () => {
-            msg.innerText = "جاري تحسين الصورة وقراءة الرمز... ⏳";
+            msg.innerText = "جاري القراءة... ⏳";
             scanBtn.disabled = true;
 
             const ctx = canvas.getContext('2d');
-            // ضبط حجم الكانفاس ليأخذ فقط منطقة المربع الأخضر (لزيادة الدقة)
-            const videoWidth = video.videoWidth;
-            const videoHeight = video.videoHeight;
-            
-            canvas.width = 400; // حجم ثابت للمعالجة
-            canvas.height = 200;
+            canvas.width = 400; canvas.height = 200;
+            ctx.drawImage(video, video.videoWidth*0.15, video.videoHeight*0.35, video.videoWidth*0.7, video.videoHeight*0.3, 0, 0, 400, 200);
 
-            // قص منطقة التركيز فقط من الفيديو
-            ctx.drawImage(video, videoWidth*0.15, videoHeight*0.35, videoWidth*0.7, videoHeight*0.3, 0, 0, 400, 200);
-
-            // --- معالجة احترافية للصورة (للمعادن) ---
-            let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            let data = imgData.data;
-            for (let i = 0; i < data.length; i += 4) {
-                // تحويل لرمادي عالي التباين (Black & White Threshold)
-                let avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                let threshold = 128; // عتبة الفصل بين الكود والمعدن
-                let val = avg > threshold ? 255 : 0;
-                data[i] = data[i+1] = data[i+2] = val;
-            }
-            ctx.putImageData(imgData, 0, 0);
+            // زيادة التباين لمساعدة الذكاء الاصطناعي
+            ctx.filter = 'contrast(200%) grayscale(100%)';
+            ctx.drawImage(canvas, 0, 0);
 
             try {
-                // القراءة باستخدام Tesseract
                 const result = await Tesseract.recognize(canvas, 'eng');
                 const text = result.data.text.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
                 
-                console.log("الذكاء الاصطناعي قرأ: ", text);
-
                 if (text.includes(SECRET_CODE)) {
                     winScreen.style.display = 'flex';
                 } else {
-                    msg.innerText = "لم يتم التعرف بوضوح. حاول تقريب الإضاءة أو تثبيت اليد.";
-                    // إذا أردت رؤية ما قرأه لتصحيحه: msg.innerText = "قرأت: " + text;
+                    msg.innerText = "لم يتم التعرف بوضوح. حاول الإدخال اليدوي في الأسفل.";
                 }
             } catch (e) {
-                msg.innerText = "خطأ في المعالجة، حاول ثانية.";
+                msg.innerText = "حدث خطأ. استخدم الإدخال اليدوي.";
             } finally {
                 scanBtn.disabled = false;
+            }
+        };
+
+        // التحقق عبر الإدخال اليدوي (الحل المضمون 100%)
+        manualBtn.onclick = () => {
+            const userInput = manualCodeInput.value.trim().toUpperCase();
+            if (userInput === SECRET_CODE) {
+                winScreen.style.display = 'flex';
+            } else {
+                alert("حظ أوفر، الكود الذي أدخلته غير صحيح!");
             }
         };
     </script>
