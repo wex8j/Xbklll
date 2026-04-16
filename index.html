@@ -3,310 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ماسح الجوائز الملكي - NHKFAA52</title>
+    <title>ماسح الجوائز - NHKFAA52</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
     <style>
-        :root {
-            --primary-bg: linear-gradient(180deg, #6584e8 0%, #835ab9 100%);
-            --win-bg: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-            --accent-gold: #ffcf00;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+        :root { --primary-bg: #5c7ae5; --accent: #ffcf00; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
         
         body {
-            background: var(--primary-bg);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: white;
-            overflow-x: hidden;
-            padding: 15px;
+            background: linear-gradient(180deg, #6584e8 0%, #835ab9 100%);
+            min-height: 100vh; display: flex; flex-direction: column; align-items: center; color: white; padding: 20px;
         }
 
-        /* رأس الصفحة */
-        header { text-align: center; margin-top: 20px; margin-bottom: 20px; }
-        h1 { font-size: 26px; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .subtitle { opacity: 0.8; font-size: 13px; }
+        .container { width: 100%; max-width: 400px; text-align: center; }
+        h1 { font-size: 24px; margin-bottom: 5px; font-weight: 900; }
+        .info { font-size: 13px; opacity: 0.8; margin-bottom: 20px; }
 
         /* حاوية الكاميرا */
-        .scan-zone {
-            position: relative;
-            width: 100%;
-            max-width: 320px;
-            aspect-ratio: 1 / 1;
-            border: 6px solid rgba(255,255,255,0.8);
-            border-radius: 25px;
-            overflow: hidden;
-            background: #000;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+        .scanner-box {
+            position: relative; width: 100%; aspect-ratio: 1; border: 4px solid white;
+            border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
         }
 
         #video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* إطار التوجيه المتحرك */
-        .guide-box {
+        /* منطقة التركيز لضمان قراءة السيفونة */
+        .focus-area {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 85%; height: 35%;
-            border: 3px solid #00ff00; border-radius: 12px;
-            box-shadow: 0 0 0 1000px rgba(0,0,0,0.6);
-            pointer-events: none;
+            width: 70%; height: 30%; border: 2px solid #00ff00; border-radius: 8px;
+            box-shadow: 0 0 0 1000px rgba(0,0,0,0.6); pointer-events: none;
         }
 
-        .scan-line {
-            position: absolute; top: 0; left: 0; width: 100%; height: 3px;
-            background: rgba(0, 255, 0, 0.8);
-            box-shadow: 0 0 20px 5px rgba(0, 255, 0, 0.6);
-            animation: scanning 1.8s infinite linear;
+        .scan-anim {
+            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: #00ff00; box-shadow: 0 0 15px #00ff00; animation: move 2s infinite linear;
+        }
+        @keyframes move { 0%, 100% { top: 0; } 50% { top: 100%; } }
+
+        .btn-check {
+            margin-top: 25px; width: 100%; padding: 18px; border-radius: 50px;
+            border: none; background: white; color: #6584e8; font-size: 20px;
+            font-weight: 700; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
 
-        @keyframes scanning { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
-
-        /* منطقة التحكم */
-        .controls { margin-top: 25px; width: 100%; max-width: 300px; text-align: center; }
-        .scan-btn {
-            background: white; color: #6584e8; border: none;
-            width: 100%; padding: 16px; border-radius: 50px;
-            font-size: 19px; font-weight: 700; cursor: pointer;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-            transition: all 0.2s;
-        }
-        .scan-btn:active { transform: scale(0.96); box-shadow: 0 3px 10px rgba(0,0,0,0.2); }
-        .scan-btn:disabled { opacity: 0.5; cursor: wait; }
-
-        #status { font-size: 12px; margin-top: 10px; opacity: 0.8; height: 1.2em; }
-
-        /* ========================================= */
-        /* === شاشة الفوز الخرافية (الشغل الصدك) === */
-        /* ========================================= */
-        #winnerOverlay {
+        /* شاشة الفوز */
+        .win-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 200;
-            justify-content: center; align-items: center;
-            opacity: 0; transition: opacity 0.5s ease;
+            background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center;
+            flex-direction: column; text-align: center;
         }
+        .win-content { background: white; color: #333; padding: 40px 20px; border-radius: 30px; width: 85%; }
+        .win-title { color: #835ab9; font-size: 30px; font-weight: 900; animation: bounce 1s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-        #winnerOverlay.show { display: flex; opacity: 1; }
-
-        .win-card {
-            background: var(--win-bg); color: #333;
-            width: 90%; max-width: 340px;
-            padding: 40px 20px; border-radius: 30px;
-            text-align: center; position: relative;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            border: 4px solid var(--accent-gold);
-            transform: scale(0.8); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        #winnerOverlay.show .win-card { transform: scale(1); }
-
-        .crown-icon { font-size: 60px; margin-bottom: 10px; display: block; }
-
-        /* عبارة مبروك الفوز المتحركة */
-        .win-title {
-            font-size: 38px; font-weight: 900; color: #835ab9;
-            margin-bottom: 15px;
-            animation: pulseText 1.5s infinite;
-        }
-
-        @keyframes pulseText {
-            0%, 100% { transform: scale(1); text-shadow: 0 0 10px rgba(131,90,185,0.3); }
-            50% { transform: scale(1.05); text-shadow: 0 0 25px rgba(131,90,185,0.6); }
-        }
-
-        .win-msg { font-size: 18px; line-height: 1.5; margin-bottom: 30px; }
-        .code-display { font-weight: bold; color: #6584e8; background: rgba(101,132,232,0.1); padding: 2px 8px; border-radius: 5px; }
-
-        .close-win-btn {
-            background: #835ab9; color: white; border: none;
-            padding: 14px 30px; border-radius: 12px;
-            font-size: 16px; font-weight: bold; cursor: pointer;
-            width: 100%; box-shadow: 0 5px 15px rgba(131,90,185,0.3);
-        }
-
-        /* عناصر القصاصات الملونة (Confetti) */
-        .confetti {
-            position: absolute; width: 10px; height: 10px;
-            background: #ffd700; top: -10px;
-            border-radius: 50%;
-            animation: confettiDrop 2.5s infinite linear;
-        }
-
-        @keyframes confettiDrop {
-            0% { top: -10px; transform: translateX(0) rotate(0deg); opacity: 1; }
-            100% { top: 100%; transform: translateX(var(--drop-x)) rotate(var(--drop-r)); opacity: 0; }
-        }
-
-        canvas { display: none; }
+        #debugCanvas { display: none; } /* لإخفاء المعالجة البرمجية */
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>امسح واربح! 🎉</h1>
-        <p class="subtitle">ضع الكود السري الحقيقي داخل الإطار الأخضر</p>
-    </header>
+    <div class="container">
+        <h1>امسح واربح! 🎁</h1>
+        <p class="info">وجه المربع الأخضر نحو الكود المحفور بدقة</p>
 
-    <div class="scan-zone">
-        <video id="video" autoplay playsinline></video>
-        <div class="guide-box">
-            <div class="scan-line"></div>
+        <div class="scanner-box">
+            <video id="video" autoplay playsinline></video>
+            <div class="focus-area">
+                <div class="scan-anim"></div>
+            </div>
+        </div>
+
+        <button class="btn-check" id="scanBtn">إفحص الكود الآن</button>
+        <p id="msg" style="margin-top:15px; font-size: 13px;"></p>
+    </div>
+
+    <div class="win-overlay" id="winScreen">
+        <div class="win-content">
+            <h2 class="win-title">مبروك الفوز! 🎉</h2>
+            <p style="margin: 15px 0;">لقد فزت معنا بالكود السري الصحيح</p>
+            <button class="btn-check" style="background: #835ab9; color: white;" onclick="location.reload()">إغلاق</button>
         </div>
     </div>
 
-    <div class="controls">
-        <button class="scan-btn" id="captureBtn">إفحص الكود الآن 🔍</button>
-        <div id="status">جاهز للمسح...</div>
-    </div>
-
-    <div id="winnerOverlay">
-        <div class="win-card">
-            <span class="crown-icon">🏆</span>
-            <h2 class="win-title">مبروووك الفوز!</h2>
-            <p class="win-msg">أنت فائز حقيقي معنا. لقد تم التعرف على الكود السري <span class="code-display">NHKFAA52</span> بنجاح.</p>
-            <button class="close-win-btn" onclick="closeWinnerScreen()">إغلاق ومتابعة</button>
-        </div>
-    </div>
-
-    <canvas id="canvas"></canvas>
+    <canvas id="debugCanvas"></canvas>
 
     <script>
         const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const captureBtn = document.getElementById('captureBtn');
-        const status = document.getElementById('status');
-        const winnerOverlay = document.getElementById('winnerOverlay');
+        const scanBtn = document.getElementById('scanBtn');
+        const msg = document.getElementById('msg');
+        const winScreen = document.getElementById('winScreen');
+        const canvas = document.getElementById('debugCanvas');
 
-        // الكود السري الحقيقي والنهائي
-        const SECRET_CODE = "NHKFAA52"; 
-        
-        let isProcessing = false;
+        const SECRET_CODE = "NHKFAA52";
 
-        // تشغيل الكاميرا فور فتح الموقع
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }, 
-                    audio: false 
-                });
-                video.srcObject = stream;
-            } catch (err) {
-                status.innerText = "خطأ: لم يتم الوصول للكاميرا. تأكد من الأذونات.";
-                console.error(err);
+        // تشغيل الكاميرا
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => { msg.innerText = "يرجى السماح بالوصول للكاميرا"; });
+
+        scanBtn.onclick = async () => {
+            msg.innerText = "جاري تحسين الصورة وقراءة الرمز... ⏳";
+            scanBtn.disabled = true;
+
+            const ctx = canvas.getContext('2d');
+            // ضبط حجم الكانفاس ليأخذ فقط منطقة المربع الأخضر (لزيادة الدقة)
+            const videoWidth = video.videoWidth;
+            const videoHeight = video.videoHeight;
+            
+            canvas.width = 400; // حجم ثابت للمعالجة
+            canvas.height = 200;
+
+            // قص منطقة التركيز فقط من الفيديو
+            ctx.drawImage(video, videoWidth*0.15, videoHeight*0.35, videoWidth*0.7, videoHeight*0.3, 0, 0, 400, 200);
+
+            // --- معالجة احترافية للصورة (للمعادن) ---
+            let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let data = imgData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                // تحويل لرمادي عالي التباين (Black & White Threshold)
+                let avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                let threshold = 128; // عتبة الفصل بين الكود والمعدن
+                let val = avg > threshold ? 255 : 0;
+                data[i] = data[i+1] = data[i+2] = val;
             }
-        }
-
-        startCamera();
-
-        captureBtn.addEventListener('click', async () => {
-            if (isProcessing) return; // منع التكرار إذا كان جاري المعالجة
-            isProcessing = true;
-
-            const context = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            // 1. أخذ لقطة من الفيديو
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // 2. معالجة الصورة لتقليل التشويش (تحسين القراءة من الشاشات)
-            // تحويل للأبيض والأسود وزيادة التباين
-            context.filter = 'grayscale(100%) contrast(150%)';
-            context.drawImage(canvas, 0, 0); // رسم الصورة المعدلة فوق الأصلية
-            context.filter = 'none'; // إعادة الفلتر لوضعه الطبيعي
-
-            status.innerText = "جاري القراءة والتحليل بدقة... ⏳";
-            captureBtn.disabled = true;
-            captureBtn.innerText = "جاري الفحص...";
+            ctx.putImageData(imgData, 0, 0);
 
             try {
-                // 3. تحليل الصورة باستخدام Tesseract (حروف وأرقام فقط)
-                const result = await Tesseract.recognize(canvas, 'eng', {
-                    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-                    logger: m => console.log(m.progress)
-                });
-
-                // 4. تنظيف النص المستخرج (مسح كل شي ما عدا الحروف والأرقام)
-                const scannedRaw = result.data.text.replace(/[^a-zA-Z0-9]/g, '');
+                // القراءة باستخدام Tesseract
+                const result = await Tesseract.recognize(canvas, 'eng');
+                const text = result.data.text.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
                 
-                // تحويل للـ UpperCase للمقارنة العادلة (لأن المستخدم كتبه بالكبير)
-                const scannedText = scannedRaw.toUpperCase();
-                
-                console.log("النتيجة الخام:", scannedRaw);
-                console.log("النتيجة للمقارنة:", scannedText);
+                console.log("الذكاء الاصطناعي قرأ: ", text);
 
-                // 5. التحقق من الكود
-                if (scannedText.includes(SECRET_CODE.toUpperCase())) {
-                    showWinnerScreen();
+                if (text.includes(SECRET_CODE)) {
+                    winScreen.style.display = 'flex';
                 } else {
-                    // إذا لم يجد الكود، نظهر النص الذي قرأه للتصحيح (اختياري)
-                    status.innerText = "حظ أوفر. الكود المقروء (" + scannedRaw + ") غير صحيح.";
-                    captureBtn.disabled = false;
-                    captureBtn.innerText = "إفحص الكود الآن 🔍";
-                    isProcessing = false;
+                    msg.innerText = "لم يتم التعرف بوضوح. حاول تقريب الإضاءة أو تثبيت اليد.";
+                    // إذا أردت رؤية ما قرأه لتصحيحه: msg.innerText = "قرأت: " + text;
                 }
-
-            } catch (error) {
-                status.innerText = "حدث خطأ أثناء معالجة الصورة. حاول مرة أخرى.";
-                captureBtn.disabled = false;
-                captureBtn.innerText = "إفحص الكود الآن 🔍";
-                isProcessing = false;
+            } catch (e) {
+                msg.innerText = "خطأ في المعالجة، حاول ثانية.";
+            } finally {
+                scanBtn.disabled = false;
             }
-        });
-
-        // =========================================
-        // === وظائف شاشة الفوز المتحركة ===
-        // =========================================
-        function showWinnerScreen() {
-            // إيقاف الكاميرا لمنع التكرار
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-            }
-            
-            // إنشاء قصاصات الورق الملونة
-            createConfetti();
-            
-            // إظهار الشاشة
-            winnerOverlay.classList.add('show');
-            status.innerText = "تم الفوز! 🎉";
-        }
-
-        function closeWinnerScreen() {
-            winnerOverlay.classList.remove('show');
-            // إزالة القصاصات
-            const confettis = document.querySelectorAll('.confetti');
-            confettis.forEach(c => c.remove());
-            
-            // إعادة تشغيل الكاميرا وجاهزية الزر
-            startCamera();
-            captureBtn.disabled = false;
-            captureBtn.innerText = "إفحص الكود الآن 🔍";
-            status.innerText = "جاهز للمسح مرة أخرى...";
-            isProcessing = false;
-        }
-
-        // دالة إنشاء قصاصات الورق الملونة (Confetti)
-        function createConfetti() {
-            const colors = ['#ffd700', '#ffcf00', '#835ab9', '#6584e8', '#ff4d4d', '#4dff4d'];
-            for (let i = 0; i < 50; i++) {
-                const confetti = document.createElement('div');
-                confetti.classList.add('confetti');
-                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-                confetti.style.left = Math.random() * 100 + '%';
-                
-                // متغيرات عشوائية للحركة
-                confetti.style.setProperty('--drop-x', (Math.random() * 200 - 100) + 'px');
-                confetti.style.setProperty('--drop-r', (Math.random() * 720 - 360) + 'deg');
-                
-                // تأخير عشوائي
-                confetti.style.animationDelay = Math.random() * 2 + 's';
-                confetti.style.animationDuration = (Math.random() * 1 + 2) + 's'; // بين 2-3 ثواني
-                
-                winnerOverlay.appendChild(confetti);
-            }
-        }
+        };
     </script>
 </body>
 </html>
