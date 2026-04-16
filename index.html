@@ -69,7 +69,7 @@
             height: 100%;
             object-fit: cover;
             display: block;
-            transform: scaleX(-1);
+            /* تم إلغاء transform: scaleX(-1) - الكاميرا الآن طبيعية */
         }
 
         .scan-overlay {
@@ -210,12 +210,12 @@
 
     <!-- منطقة الكاميرا -->
     <div class="scanner-wrapper" id="scannerWrapper">
-        <video id="cameraVideo" autoplay playsinline muted></video>
+        <video id="cameraVideo" autoplay playsinline></video>
         <div class="scan-overlay">
             <div class="corner corner-tl"></div>
             <div class="corner corner-tr"></div>
             <div class="corner corner-bl"></div>
-            <div class="corner-br"></div>
+            <div class="corner corner-br"></div>
             <div class="scan-line" id="scanLine"></div>
         </div>
     </div>
@@ -238,9 +238,9 @@
     (function(){
         "use strict";
 
-        // الكود السري (مخفي تماماً عن المستخدم)
+        // الكود السري (مخفي تماماً)
         const SECRET_CODE = "3txn";
-        const SCAN_INTERVAL_MS = 200;
+        const SCAN_INTERVAL_MS = 150; // أسرع للمسح
 
         // عناصر DOM
         const video = document.getElementById('cameraVideo');
@@ -309,33 +309,41 @@
             lastResultTimestamp = Date.now();
         }
 
-        // مسح الإطار
+        // مسح الإطار - نسخة محسنة
         function scanFrame() {
             if (!isCameraActive) return;
             if (!video.videoWidth || !video.videoHeight) return;
 
+            // ضبط حجم canvas
             if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
             }
 
+            // رسم الإطار الحالي
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // الحصول على بيانات الصورة
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             
+            // محاولة قراءة الكود مع خيارات محسنة
             const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                inversionAttempts: "dontInvert",
+                inversionAttempts: "attemptBoth", // محاولة عكس الألوان أيضاً
             });
 
-            if (code) {
-                const scannedText = code.data;
-                if (!scannedText || scannedText.trim() === '') return;
+            if (code && code.data) {
+                const scannedText = code.data.trim();
+                if (!scannedText) return;
 
                 const now = Date.now();
+                
+                // منع تكرار نفس النتيجة بسرعة
                 if (scannedText === lastScannedCode && (now - lastResultTimestamp) < RESULT_COOLDOWN_MS) {
                     return;
                 }
 
-                const isWinner = (scannedText.trim() === SECRET_CODE);
+                // التحقق من الكود
+                const isWinner = (scannedText === SECRET_CODE);
                 displayResult(scannedText, isWinner);
             }
         }
@@ -353,6 +361,7 @@
             try {
                 stopCamera();
                 
+                // طلب الكاميرا الخلفية بدقة مناسبة
                 const constraints = {
                     video: {
                         facingMode: "environment",
@@ -366,6 +375,7 @@
                 currentStream = stream;
                 video.srcObject = stream;
                 
+                // انتظار تحميل الفيديو
                 await new Promise((resolve) => {
                     video.onloadedmetadata = () => resolve();
                 });
@@ -420,6 +430,9 @@
         // الحالة الأولية
         updateUIForCamera(false);
         scanLine.style.display = 'none';
+        
+        // رسالة ترحيبية
+        resultMessageDiv.innerHTML = '🎁 جاهز للمسح';
     })();
 </script>
 </body>
