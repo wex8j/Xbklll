@@ -8,62 +8,34 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
     <style>
-        :root { --primary-bg: #5c7ae5; --accent: #ffcf00; }
+        :root { --primary-bg: #5c7ae5; --accent: #ffcf00; --lose-color: #ff4d4d; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
         
-        body {
-            background: linear-gradient(180deg, #6584e8 0%, #835ab9 100%);
-            min-height: 100vh; display: flex; flex-direction: column; align-items: center; color: white; padding: 20px;
-        }
+        body { background: linear-gradient(180deg, #6584e8 0%, #835ab9 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; color: white; padding: 20px; }
 
         .container { width: 100%; max-width: 400px; text-align: center; }
         h1 { font-size: 24px; margin-bottom: 5px; font-weight: 900; }
         .info { font-size: 13px; opacity: 0.9; margin-bottom: 15px; }
 
-        /* الكاميرا */
-        .scanner-box {
-            position: relative; width: 100%; aspect-ratio: 1; border: 4px solid white;
-            border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-        }
+        .scanner-box { position: relative; width: 100%; aspect-ratio: 1; border: 4px solid white; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
         #video { width: 100%; height: 100%; object-fit: cover; }
-        .focus-area {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 70%; height: 30%; border: 2px solid #00ff00; border-radius: 8px;
-            box-shadow: 0 0 0 1000px rgba(0,0,0,0.6); pointer-events: none;
-        }
+        .focus-area { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; height: 30%; border: 2px solid #00ff00; border-radius: 8px; box-shadow: 0 0 0 1000px rgba(0,0,0,0.6); pointer-events: none; }
 
-        .btn-check {
-            margin-top: 15px; width: 100%; padding: 15px; border-radius: 50px;
-            border: none; background: white; color: #6584e8; font-size: 18px;
-            font-weight: 700; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
+        .btn-check { margin-top: 15px; width: 100%; padding: 15px; border-radius: 50px; border: none; background: white; color: #6584e8; font-size: 18px; font-weight: 700; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
 
-        /* قسم الإدخال اليدوي */
-        .manual-entry {
-            margin-top: 20px; background: rgba(255,255,255,0.1); padding: 15px;
-            border-radius: 15px; border: 1px solid rgba(255,255,255,0.3);
-        }
-        .manual-entry p { font-size: 14px; margin-bottom: 10px; }
+        .manual-entry { margin-top: 20px; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.3); }
         .input-group { display: flex; gap: 10px; }
-        #manualCode {
-            flex: 1; padding: 12px; border-radius: 10px; border: none; text-align: center;
-            font-size: 16px; font-weight: bold; font-family: monospace; text-transform: uppercase;
-        }
-        #manualBtn {
-            padding: 12px 20px; border-radius: 10px; border: none;
-            background: var(--accent); color: #333; font-weight: bold; cursor: pointer;
-        }
+        #manualCode { flex: 1; padding: 12px; border-radius: 10px; border: none; text-align: center; font-size: 16px; font-weight: bold; font-family: monospace; text-transform: uppercase; }
+        #manualBtn { padding: 12px 20px; border-radius: 10px; border: none; background: var(--accent); color: #333; font-weight: bold; cursor: pointer; }
 
-        /* شاشة الفوز */
-        .win-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center;
-            flex-direction: column; text-align: center;
-        }
-        .win-content { background: white; color: #333; padding: 40px 20px; border-radius: 30px; width: 85%; }
-        .win-title { color: #835ab9; font-size: 30px; font-weight: 900; animation: bounce 1s infinite; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-
+        /* شاشات النتائج */
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; text-align: center; }
+        .modal-content { background: white; color: #333; padding: 40px 20px; border-radius: 30px; width: 85%; max-width: 320px; }
+        
+        /* تأثير الحظ الأوفر */
+        .lose-content { border: 3px solid var(--lose-color); animation: shake 0.5s; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+        
         canvas { display: none; }
     </style>
 </head>
@@ -71,96 +43,65 @@
 
     <div class="container">
         <h1>امسح واربح! 🎁</h1>
-        <p class="info">وجه المربع الأخضر نحو الكود (تحتاج إضاءة جيدة)</p>
-
-        <div class="scanner-box">
-            <video id="video" autoplay playsinline></video>
-            <div class="focus-area"></div>
-        </div>
-
+        <p class="info">وجه المربع الأخضر نحو الكود</p>
+        <div class="scanner-box"><video id="video" autoplay playsinline></video><div class="focus-area"></div></div>
         <button class="btn-check" id="scanBtn">إفحص الكاميرا 📷</button>
         <p id="msg" style="margin-top:10px; font-size: 13px;"></p>
-
         <div class="manual-entry">
-            <p>الكاميرا لا تقرأ الكود؟ أدخله يدوياً:</p>
             <div class="input-group">
-                <input type="text" id="manualCode" placeholder="أدخل الكود السري هنا" maxlength="10">
+                <input type="text" id="manualCode" placeholder="أدخل الكود يدوياً" maxlength="10">
                 <button id="manualBtn">تحقق</button>
             </div>
         </div>
     </div>
 
-    <div class="win-overlay" id="winScreen">
-        <div class="win-content">
-            <h2 class="win-title">مبروك الفوز! 🎉</h2>
-            <p style="margin: 15px 0;">لقد فزت معنا بالكود السري <br><strong style="color:#6584e8; font-size: 22px;">NHKFAA52</strong></p>
-            <button class="btn-check" style="background: #835ab9; color: white;" onclick="location.reload()">إغلاق ومتابعة</button>
+    <div class="overlay" id="winScreen">
+        <div class="modal-content">
+            <h2 style="color: #835ab9; font-size: 30px; font-weight: 900;">مبروك الفوز! 🎉</h2>
+            <p style="margin: 15px 0;">لقد فزت بالكود السري <br><strong style="color:#6584e8; font-size: 22px;">NHKFAA52</strong></p>
+            <button class="btn-check" style="background: #835ab9; color: white;" onclick="location.reload()">إغلاق</button>
         </div>
     </div>
 
-    <canvas id="canvas"></canvas>
+    <div class="overlay" id="loseScreen">
+        <div class="modal-content lose-content">
+            <h2 style="font-size: 50px; margin-bottom: 10px;">😔</h2>
+            <h2 style="color: var(--lose-color); font-size: 26px; font-weight: 900;">حظ أوفر!</h2>
+            <p style="margin: 15px 0;">عذراً، الكود الذي أدخلته غير صحيح. حاول مرة أخرى.</p>
+            <button class="btn-check" style="background: var(--lose-color); color: white;" onclick="document.getElementById('loseScreen').style.display='none'">محاولة أخرى</button>
+        </div>
+    </div>
 
     <script>
         const video = document.getElementById('video');
         const scanBtn = document.getElementById('scanBtn');
-        const msg = document.getElementById('msg');
         const winScreen = document.getElementById('winScreen');
-        const canvas = document.getElementById('canvas');
-        
-        const manualCodeInput = document.getElementById('manualCode');
-        const manualBtn = document.getElementById('manualBtn');
-
+        const loseScreen = document.getElementById('loseScreen');
         const SECRET_CODE = "NHKFAA52";
 
-        // محاولة إجبار الكاميرا على التركيز (Autofocus) إن دعمها المتصفح
-        const constraints = {
-            video: {
-                facingMode: "environment",
-                advanced: [{ focusMode: "continuous" }]
-            }
-        };
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", advanced: [{ focusMode: "continuous" }] } })
+            .then(s => video.srcObject = s);
 
-        navigator.mediaDevices.getUserMedia(constraints)
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => { msg.innerText = "تعذر فتح الكاميرا."; });
-
-        // التحقق عبر الكاميرا
-        scanBtn.onclick = async () => {
-            msg.innerText = "جاري القراءة... ⏳";
-            scanBtn.disabled = true;
-
-            const ctx = canvas.getContext('2d');
-            canvas.width = 400; canvas.height = 200;
-            ctx.drawImage(video, video.videoWidth*0.15, video.videoHeight*0.35, video.videoWidth*0.7, video.videoHeight*0.3, 0, 0, 400, 200);
-
-            // زيادة التباين لمساعدة الذكاء الاصطناعي
-            ctx.filter = 'contrast(200%) grayscale(100%)';
-            ctx.drawImage(canvas, 0, 0);
-
-            try {
-                const result = await Tesseract.recognize(canvas, 'eng');
-                const text = result.data.text.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-                
-                if (text.includes(SECRET_CODE)) {
-                    winScreen.style.display = 'flex';
-                } else {
-                    msg.innerText = "لم يتم التعرف بوضوح. حاول الإدخال اليدوي في الأسفل.";
-                }
-            } catch (e) {
-                msg.innerText = "حدث خطأ. استخدم الإدخال اليدوي.";
-            } finally {
-                scanBtn.disabled = false;
-            }
-        };
-
-        // التحقق عبر الإدخال اليدوي (الحل المضمون 100%)
-        manualBtn.onclick = () => {
-            const userInput = manualCodeInput.value.trim().toUpperCase();
-            if (userInput === SECRET_CODE) {
+        function checkResult(text) {
+            if (text.includes(SECRET_CODE)) {
                 winScreen.style.display = 'flex';
             } else {
-                alert("حظ أوفر، الكود الذي أدخلته غير صحيح!");
+                loseScreen.style.display = 'flex';
             }
+        }
+
+        scanBtn.onclick = async () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 400; canvas.height = 200;
+            ctx.filter = 'contrast(200%) grayscale(100%)';
+            ctx.drawImage(video, 0, 0, 400, 200);
+            const res = await Tesseract.recognize(canvas, 'eng');
+            checkResult(res.data.text.replace(/[^a-zA-Z0-9]/g, '').toUpperCase());
+        };
+
+        document.getElementById('manualBtn').onclick = () => {
+            checkResult(document.getElementById('manualCode').value.toUpperCase());
         };
     </script>
 </body>
