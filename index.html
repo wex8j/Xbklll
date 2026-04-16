@@ -3,20 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>امسح واربح</title>
+    <title>امسح واربح - ww2345</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Cairo', sans-serif;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
         body {
-            /* تدرج لوني يطابق الخلفية في الصورة */
             background: linear-gradient(180deg, #6584e8 0%, #835ab9 100%);
             min-height: 100vh;
             display: flex;
@@ -25,231 +18,115 @@
             justify-content: center;
             color: white;
             text-align: center;
-            position: relative;
-            overflow: hidden;
         }
 
-        /* قائمة اللغات في أعلى اليسار */
-        .lang-selector {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            display: flex;
-            gap: 10px;
-            direction: ltr;
-        }
+        .lang-selector { position: absolute; top: 20px; left: 20px; display: flex; gap: 10px; direction: ltr; }
+        .lang-btn { background: transparent; border: 1px solid rgba(255, 255, 255, 0.6); color: white; padding: 5px 15px; border-radius: 20px; font-size: 14px; }
+        .lang-btn.active { background: white; color: #6584e8; }
 
-        .lang-btn {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            cursor: pointer;
-            font-weight: bold;
-        }
+        .main-content { padding: 20px; }
+        h1 { font-size: 36px; font-weight: 700; margin-bottom: 15px; }
+        .subtitle { font-size: 18px; margin-bottom: 40px; opacity: 0.9; }
 
-        .lang-btn.active {
-            background: white;
-            color: #6584e8;
-            border-color: white;
-        }
-
-        /* المحتوى الرئيسي */
-        .main-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            margin-top: 50px;
-        }
-
-        h1 {
-            font-size: 36px;
-            font-weight: 700;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .subtitle {
-            font-size: 18px;
-            margin-bottom: 40px;
-            line-height: 1.5;
-            max-width: 300px;
-        }
-
-        /* زر الكاميرا */
         .camera-btn {
-            background-color: white;
-            color: #6584e8;
-            border: none;
-            padding: 15px 40px;
-            border-radius: 30px;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
-            margin-bottom: 30px;
-            width: 250px;
-            justify-content: center;
+            background-color: white; color: #6584e8; border: none;
+            padding: 15px 40px; border-radius: 30px; font-size: 20px;
+            font-weight: bold; cursor: pointer; display: flex;
+            align-items: center; gap: 10px; width: 260px; justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
-        .camera-btn:active {
-            transform: scale(0.95);
-        }
-
-        .camera-icon {
-            font-size: 24px;
-        }
-
-        .footer-text {
-            font-size: 14px;
-            opacity: 0.8;
-            max-width: 250px;
-        }
-
-        /* نافذة النتيجة (منبثقة) */
+        /* نافذة النتيجة */
         .result-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;
         }
-
         .modal-content {
-            background: white;
-            color: #333;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            width: 80%;
-            max-width: 300px;
+            background: white; color: #333; padding: 30px; border-radius: 20px;
+            text-align: center; width: 85%; max-width: 320px;
         }
-
-        .modal-content h2 {
-            margin-bottom: 15px;
-            color: #6584e8;
-        }
-
         .close-btn {
-            background: #6584e8;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-            cursor: pointer;
-            font-weight: bold;
+            background: #6584e8; color: white; border: none; padding: 10px 25px;
+            border-radius: 10px; margin-top: 20px; cursor: pointer;
         }
     </style>
 </head>
 <body>
 
     <div class="lang-selector">
-        <button class="lang-btn">EN</button>
-        <button class="lang-btn active">العربية</button>
-        <button class="lang-btn">كوردي</button>
+        <div class="lang-btn">EN</div>
+        <div class="lang-btn active">العربية</div>
+        <div class="lang-btn">كوردي</div>
     </div>
 
     <div class="main-content">
         <h1>امسح واربح! 🎉</h1>
-        <p class="subtitle">امسح الرمز الموجود على العلبة للتحقق مما إذا كنت فائزاً!</p>
+        <p class="subtitle">امسح الكود السري لمعرفة الجائزة</p>
 
-        <button class="camera-btn" id="cameraBtn">
-            <span class="camera-icon">📷</span>
-            <span id="btnText">افتح الكاميرا</span>
+        <button class="camera-btn" id="scanTrigger">
+            <span>📷</span>
+            <span id="statusText">افتح الكاميرا</span>
         </button>
 
-        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
-
-        <p class="footer-text">وجّه الكاميرا نحو الرمز المحفور على العلبة</p>
+        <input type="file" id="imageInput" accept="image/*" capture="environment" style="display: none;">
     </div>
 
     <div class="result-modal" id="resultModal">
         <div class="modal-content">
-            <h2 id="modalTitle">النتيجة</h2>
-            <p id="modalMessage"></p>
-            <button class="close-btn" onclick="closeModal()">إغلاق</button>
+            <h2 id="resTitle"></h2>
+            <p id="resMsg" style="margin-top:10px;"></p>
+            <button class="close-btn" onclick="document.getElementById('resultModal').style.display='none'">إغلاق</button>
         </div>
     </div>
 
     <script>
-        const cameraBtn = document.getElementById('cameraBtn');
-        const cameraInput = document.getElementById('cameraInput');
-        const btnText = document.getElementById('btnText');
-        
+        const scanTrigger = document.getElementById('scanTrigger');
+        const imageInput = document.getElementById('imageInput');
+        const statusText = document.getElementById('statusText');
         const resultModal = document.getElementById('resultModal');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalMessage = document.getElementById('modalMessage');
 
-        // عند الضغط على الزر، يتم تفعيل مدخل الكاميرا المخفي
-        cameraBtn.addEventListener('click', () => {
-            cameraInput.click();
-        });
+        // الكود السري الجديد
+        const SECRET_CODE = "ww2345";
 
-        // عند التقاط الصورة من الكاميرا
-        cameraInput.addEventListener('change', async (e) => {
+        scanTrigger.onclick = () => imageInput.click();
+
+        imageInput.onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            // تغيير نص الزر ليدل على بدء الفحص
-            btnText.innerText = 'جاري الفحص... ⏳';
-            cameraBtn.disabled = true;
+            statusText.innerText = "جاري القراءة...";
+            scanTrigger.style.opacity = "0.7";
 
             try {
-                // استخدام مكتبة Tesseract لقراءة النص الإنجليزي والأرقام من الصورة
-                const result = await Tesseract.recognize(
-                    file,
-                    'eng', // قراءة اللغة الإنجليزية والأرقام فقط
-                    { logger: m => console.log(m) } // لمتابعة التقدم في الكونسول
-                );
+                // تفعيل القراءة
+                const result = await Tesseract.recognize(file, 'eng');
+                
+                // تنظيف النص (حروف صغيرة وبدون مسافات)
+                const scanned = result.data.text.toLowerCase().replace(/\s+/g, '');
+                
+                console.log("الذكاء الاصطناعي قرأ:", scanned);
 
-                // تنظيف النص المستخرج (تحويله لأحرف صغيرة وإزالة أي مسافات أو رموز)
-                const extractedText = result.data.text.toLowerCase();
-                // استخراج الأحرف الإنجليزية والأرقام فقط
-                const alphanumericText = extractedText.replace(/[^a-z0-9]/g, '');
-
-                console.log("النص المستخرج:", alphanumericText);
-
-                // التحقق من الكود السري
-                if (alphanumericText.includes('3txn')) {
-                    showModal('مبروك! 🎉', 'أنت فائز! لقد تم التعرف على الكود الصحيح.');
+                // التحقق: إذا النص يحتوي على الكود السري
+                if (scanned.includes(SECRET_CODE)) {
+                    showResult("مبروووك! 🏆", "لقد فزت معنا، الكود " + SECRET_CODE + " صحيح.");
                 } else {
-                    showModal('عذراً', 'حظ أوفر، الرمز غير صحيح.');
+                    // إظهار النص المقروء للتاكد (اختياري، يمكنك حذفه لاحقاً)
+                    showResult("حظ أوفر", "لم يتم العثور على الكود المطلوب.");
                 }
-
-            } catch (error) {
-                console.error(error);
-                showModal('خطأ', 'حدث خطأ أثناء قراءة الرمز، يرجى التأكد من وضوح الصورة والمحاولة مرة أخرى.');
+            } catch (err) {
+                showResult("خطأ", "فشل في معالجة الصورة. حاول مرة ثانية.");
             } finally {
-                // إعادة الزر لحالته الطبيعية
-                btnText.innerText = 'افتح الكاميرا';
-                cameraBtn.disabled = false;
-                cameraInput.value = ''; // تصفير المدخل لاحتمالية المحاولة مرة أخرى
+                statusText.innerText = "افتح الكاميرا";
+                scanTrigger.style.opacity = "1";
+                imageInput.value = "";
             }
-        });
+        };
 
-        function showModal(title, message) {
-            modalTitle.innerText = title;
-            modalMessage.innerText = message;
+        function showResult(title, msg) {
+            document.getElementById('resTitle').innerText = title;
+            document.getElementById('resMsg').innerText = msg;
             resultModal.style.display = 'flex';
         }
-
-        function closeModal() {
-            resultModal.style.display = 'none';
-        }
     </script>
-
 </body>
 </html>
